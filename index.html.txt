@@ -1,0 +1,626 @@
+
+<h2 class="sr-only">Supply Chain Planning Business Case Evaluation Agent — a fully interactive model covering Demand Planning, Supply Planning, and IBP with assumption override controls, scenario switching, driver calculations, and an AI analyst agent.</h2>
+
+<style>
+.wrap { font-family: var(--font-sans); padding: 1rem 0; }
+.section-label { font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: var(--color-text-secondary); margin: 1.25rem 0 .5rem; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+.grid4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+.card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; }
+.mc { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: .85rem 1rem; }
+.mc-lbl { font-size: 11px; color: var(--color-text-secondary); margin: 0 0 3px; }
+.mc-val { font-size: 20px; font-weight: 500; color: var(--color-text-primary); margin: 0; }
+.mc-sub { font-size: 11px; color: var(--color-text-secondary); margin: 2px 0 0; }
+.field { display: flex; flex-direction: column; gap: 3px; }
+.field label { font-size: 12px; color: var(--color-text-secondary); }
+.field input, .field select { box-sizing: border-box; width: 100%; font-size: 13px; }
+.tab-row { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 1rem; }
+.tab { padding: 6px 13px; font-size: 12px; border-radius: var(--border-radius-md); cursor: pointer; border: 0.5px solid var(--color-border-tertiary); background: transparent; color: var(--color-text-secondary); }
+.tab.active { background: var(--color-background-primary); color: var(--color-text-primary); border-color: var(--color-border-secondary); font-weight: 500; }
+.panel { display: none; }
+.panel.active { display: block; }
+.row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 0.5px solid var(--color-border-tertiary); font-size: 13px; }
+.row:last-child { border-bottom: none; }
+.badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 999px; }
+.badge-dp { background: #E6F1FB; color: #0C447C; }
+.badge-sp { background: #EAF3DE; color: #27500A; }
+.badge-ibp { background: #FBEAF0; color: #72243E; }
+.badge-all { background: #FAEEDA; color: #633806; }
+.scen-btn { padding: 6px 16px; font-size: 12px; border-radius: var(--border-radius-md); cursor: pointer; border: 0.5px solid var(--color-border-secondary); background: transparent; color: var(--color-text-secondary); }
+.scen-btn.s-low { background: #FAEEDA; color: #633806; border-color: #BA7517; font-weight: 500; }
+.scen-btn.s-base { background: #E6F1FB; color: #0C447C; border-color: #185FA5; font-weight: 500; }
+.scen-btn.s-high { background: #EAF3DE; color: #27500A; border-color: #639922; font-weight: 500; }
+.ask-btn { width: 100%; text-align: left; padding: 9px 13px; font-size: 13px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: var(--color-background-primary); color: var(--color-text-primary); cursor: pointer; margin-bottom: 6px; }
+.ask-btn:hover { background: var(--color-background-secondary); }
+.chat-box { background: var(--color-background-secondary); border-radius: var(--border-radius-lg); padding: 1rem; min-height: 60px; max-height: 240px; overflow-y: auto; font-size: 13px; line-height: 1.65; }
+.chat-in { display: flex; gap: 8px; margin-top: 8px; }
+.chat-in input { flex: 1; font-size: 13px; box-sizing: border-box; }
+.send-btn { padding: 0 16px; font-size: 13px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: var(--color-background-primary); cursor: pointer; color: var(--color-text-primary); white-space: nowrap; }
+.send-btn:hover { background: var(--color-background-secondary); }
+.src-sel { font-size: 12px; border: 0.5px solid var(--color-border-secondary); border-radius: 6px; padding: 2px 6px; background: var(--color-background-secondary); color: var(--color-text-primary); cursor: pointer; }
+.override-highlight { background: #EAF3DE; border-radius: 4px; padding: 1px 5px; color: #27500A; font-weight: 500; font-size: 12px; }
+.attached-highlight { background: #E6F1FB; border-radius: 4px; padding: 1px 5px; color: #0C447C; font-weight: 500; font-size: 12px; }
+@keyframes blink { 50% { opacity: 0; } }
+.dot { display: inline-block; animation: blink 1s step-start infinite; }
+</style>
+
+<div class="wrap">
+
+<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+  <div>
+    <p style="font-size:18px;font-weight:500;margin:0 0 3px;" id="proj-title">CPG Client — Planning Transformation</p>
+    <p style="font-size:12px;color:var(--color-text-secondary);margin:0;">Supply chain planning business case · DP + SP + IBP · Assumption Override Model</p>
+  </div>
+  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+    <span style="font-size:11px;color:var(--color-text-secondary);">Scenario:</span>
+    <button class="scen-btn" id="sb-low" onclick="setScenario('Low')">Low</button>
+    <button class="scen-btn s-base" id="sb-base" onclick="setScenario('Base')">Base</button>
+    <button class="scen-btn" id="sb-high" onclick="setScenario('High')">High</button>
+  </div>
+</div>
+
+<div class="grid4" style="margin-top:1.25rem;" id="kpi-cards"></div>
+
+<div class="tab-row" style="margin-top:1.5rem;">
+  <button class="tab active" onclick="sw('inputs',this)">Inputs & Override</button>
+  <button class="tab" onclick="sw('drivers',this)">Value drivers</button>
+  <button class="tab" onclick="sw('benchmarks',this)">Benchmarks</button>
+  <button class="tab" onclick="sw('investment',this)">Investment</button>
+  <button class="tab" onclick="sw('cashflow',this)">Cash flow</button>
+  <button class="tab" onclick="sw('ai',this)">AI agent ↗</button>
+</div>
+
+<!-- INPUTS TAB -->
+<div class="panel active" id="tab-inputs">
+  <div class="grid2" style="gap:1rem;">
+    <div>
+      <p class="section-label">Global baseline inputs</p>
+      <div class="card" style="display:flex;flex-direction:column;gap:9px;">
+        <div class="field"><label>Net sales baseline (EUR)</label><input type="number" id="b-netsales" value="2913000000" oninput="recalc()"></div>
+        <div class="field"><label>Gross margin %</label><input type="number" id="b-gm" value="28" step="0.1" oninput="recalc()"></div>
+        <div class="field"><label>Average inventory (EUR)</label><input type="number" id="b-inv" value="94700000" oninput="recalc()"></div>
+        <div class="field"><label>DIO baseline (days)</label><input type="number" id="b-dio" value="28" oninput="recalc()"></div>
+        <div class="field"><label>Inventory write-offs (EUR)</label><input type="number" id="b-writeoffs" value="6650000" oninput="recalc()"></div>
+        <div class="field"><label>Production cost baseline (EUR)</label><input type="number" id="b-prod" value="220000000" oninput="recalc()"></div>
+        <div class="field"><label>Transport cost baseline (EUR)</label><input type="number" id="b-transport" value="11100000" oninput="recalc()"></div>
+        <div class="field"><label>Forecast accuracy baseline %</label><input type="number" id="b-fa" value="73.14" step="0.01" oninput="recalc()"></div>
+        <div class="field"><label>Forecast bias improvement (pp)</label><input type="number" id="b-bias" value="0.04" step="0.01" oninput="recalc()"></div>
+        <div class="field"><label>FA improvement (pp)</label><input type="number" id="b-faimp" value="0.01" step="0.001" oninput="recalc()"></div>
+        <div class="field"><label>Service level / CFR baseline %</label><input type="number" id="b-sl" value="91.3" step="0.01" oninput="recalc()"></div>
+        <div class="field"><label>Planner productivity baseline (EUR)</label><input type="number" id="b-planner" value="0" oninput="recalc()"></div>
+        <div class="field"><label>External contractor spend (EUR)</label><input type="number" id="b-contractor" value="0" oninput="recalc()"></div>
+        <div class="field"><label>Currency</label><input type="text" id="b-currency" value="EUR" oninput="recalc()"></div>
+        <div class="field"><label>Discount rate %</label><input type="number" id="b-disc" value="10" step="0.5" oninput="recalc()"></div>
+        <div class="field"><label>Year 1 ramp %</label><input type="number" id="b-r1" value="40" step="5" oninput="recalc()"></div>
+        <div class="field"><label>Year 2 ramp %</label><input type="number" id="b-r2" value="75" step="5" oninput="recalc()"></div>
+        <div class="field"><label>Include gross margin on revenue levers?</label>
+          <select id="b-usegm" onchange="recalc()"><option value="yes">Yes</option><option value="no">No</option></select>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="section-label">Assumption bridge — scenario multipliers</p>
+      <div class="card" style="display:flex;flex-direction:column;gap:8px;" id="assumption-table"></div>
+      <p class="section-label" style="margin-top:1.25rem;">Driver source override</p>
+      <div class="card" id="override-source-table"></div>
+    </div>
+  </div>
+</div>
+
+<!-- DRIVERS TAB -->
+<div class="panel" id="tab-drivers">
+  <p class="section-label">Annual run-rate value by driver</p>
+  <div class="card" id="drivers-list"></div>
+  <p class="section-label" style="margin-top:1.25rem;">Benefit waterfall</p>
+  <div class="card" id="waterfall"></div>
+</div>
+
+<!-- BENCHMARKS TAB -->
+<div class="panel" id="tab-benchmarks">
+  <p class="section-label">CPG benchmark comparison</p>
+  <div class="card" id="benchmark-table"></div>
+</div>
+
+<!-- INVESTMENT TAB -->
+<div class="panel" id="tab-investment">
+  <p class="section-label">Implementation investment profile</p>
+  <div class="card" style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;" id="inv-table"></table>
+  </div>
+  <p class="section-label" style="margin-top:1.25rem;">Edit investment assumptions</p>
+  <div class="grid2" style="gap:8px;" id="inv-inputs"></div>
+</div>
+
+<!-- CASH FLOW TAB -->
+<div class="panel" id="tab-cashflow">
+  <div id="cf-content"></div>
+</div>
+
+<!-- AI TAB -->
+<div class="panel" id="tab-ai">
+  <p class="section-label">Quick prompts</p>
+  <button class="ask-btn" onclick="ask('Give me an executive summary of this business case suitable for a CFO presentation.')">Executive summary for CFO ↗</button>
+  <button class="ask-btn" onclick="ask('Which value drivers deliver the highest ROI and which are most sensitive to assumption changes?')">Top drivers and sensitivities ↗</button>
+  <button class="ask-btn" onclick="ask('How does switching from Base to High scenario change NPV and payback?')">Base vs High scenario impact ↗</button>
+  <button class="ask-btn" onclick="ask('What are the riskiest assumptions in this model and how should I validate them before presenting to the client?')">Key assumptions to validate ↗</button>
+  <button class="ask-btn" onclick="ask('Compare the Attached Excel output versus the Assumption Override output for each driver. Which source is more credible?')">Attached Excel vs Assumption Override ↗</button>
+  <button class="ask-btn" onclick="ask('What investment is required and how does it compare to the expected return?')">Investment vs return analysis ↗</button>
+  <p class="section-label">Your question</p>
+  <div class="chat-box" id="chat-area"><p style="color:var(--color-text-secondary);margin:0;font-size:13px;">The agent has full context of your model — inputs, drivers, benchmarks, investment, and override calculations.</p></div>
+  <div class="chat-in">
+    <input type="text" id="chat-inp" placeholder="Ask anything about this business case…" onkeydown="if(event.key==='Enter')send()">
+    <button class="send-btn" onclick="send()">Send ↗</button>
+  </div>
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+let scenario = 'Base';
+let cfChart = null;
+const chatHistory = [];
+
+const SCENARIO_FACTORS = {
+  Low:  { faToSL: 0.002, biasToSL: 0.001, trueLostSales: 0.30, faToInv: 0.005,  biasToInv: 0.002,  obsShare: 0.5, rushShare: 0.05, rushPrem: 1.5, expShare: 0.05, expPrem: 2.0 },
+  Base: { faToSL: 0.003, biasToSL: 0.002, trueLostSales: 0.33, faToInv: 0.0075, biasToInv: 0.00305, obsShare: 0.6, rushShare: 0.10, rushPrem: 2.0, expShare: 0.075, expPrem: 2.5 },
+  High: { faToSL: 0.004, biasToSL: 0.003, trueLostSales: 0.40, faToInv: 0.010,  biasToInv: 0.005,  obsShare: 0.7, rushShare: 0.15, rushPrem: 2.5, expShare: 0.10, expPrem: 3.0 }
+};
+
+const INV_DEFAULTS = {
+  sw: [1200000, 350000, 350000, 350000],
+  si: [2600000, 800000, 250000, 0],
+  data: [900000, 250000, 100000, 50000],
+  cm: [450000, 200000, 100000, 50000],
+  internal: [650000, 350000, 150000, 100000],
+  hypercare: [0, 200000, 250000, 250000],
+};
+
+function g(id) { return parseFloat(document.getElementById(id)?.value) || 0; }
+function gs(id) { return document.getElementById(id)?.value || ''; }
+function fmt(n) { const c = gs('b-currency') || 'EUR'; return c + ' ' + Math.round(n).toLocaleString(); }
+function fmtM(n) { const c = gs('b-currency') || 'EUR'; return c + ' ' + (Math.round(n/100000)/10).toFixed(1) + 'M'; }
+function pct(n) { return (Math.round(n*10)/10).toFixed(1) + '%'; }
+
+function setScenario(s) {
+  scenario = s;
+  ['Low','Base','High'].forEach(x => {
+    const b = document.getElementById('sb-' + x.toLowerCase());
+    b.className = 'scen-btn';
+  });
+  document.getElementById('sb-' + s.toLowerCase()).className = 'scen-btn s-' + s.toLowerCase();
+  recalc();
+}
+
+function calcModel() {
+  const ns = g('b-netsales'), gm = g('b-gm')/100;
+  const inv = g('b-inv'), dio = g('b-dio');
+  const wo = g('b-writeoffs'), prod = g('b-prod'), trans = g('b-transport');
+  const faBasePct = g('b-fa')/100, faimp = g('b-faimp'), bias = g('b-bias');
+  const planner = g('b-planner'), contractor = g('b-contractor');
+  const disc = g('b-disc')/100, r1 = g('b-r1')/100, r2 = g('b-r2')/100;
+  const useGM = gs('b-usegm') === 'yes';
+  const sf = SCENARIO_FACTORS[scenario];
+
+  const relErrReduction = faimp / (1 - faBasePct);
+
+  const revAtRisk = ns * 0.025;
+  const slUpliftFA = faimp * sf.faToSL;
+  const slUpliftBias = bias * sf.biasToSL;
+  const gmFactor = useGM ? gm : 1;
+
+  const D1 = ns * slUpliftFA * sf.trueLostSales * gmFactor;
+  const D2 = ns * slUpliftBias * sf.trueLostSales * gmFactor;
+  const D3_invFA = inv * faimp * sf.faToInv;
+  const D4_invBias = inv * bias * sf.biasToInv;
+  const D5_obs = wo * relErrReduction * sf.obsShare;
+  const D6_prod = prod * relErrReduction * sf.rushShare * (sf.rushPrem - 1);
+  const D7_log = trans * relErrReduction * sf.expShare * (sf.expPrem - 1);
+  const D8_planner = planner;
+  const D9_contractor = contractor;
+
+  const annualRecurring = D1 + D2 + D5_obs + D6_prod + D7_log + D8_planner + D9_contractor;
+  const oneTimeWC = D3_invFA + D4_invBias;
+
+  const invTotals = calcInvTotals();
+  const totalInv = invTotals.total3yr;
+  const y0inv = invTotals.y0, y1inv = invTotals.y1, y2inv = invTotals.y2, y3inv = invTotals.y3;
+
+  const cf = [
+    -(y0inv),
+    annualRecurring * r1 + oneTimeWC - y1inv,
+    annualRecurring * r2 - y2inv,
+    annualRecurring * 1.0 - y3inv,
+  ];
+  const dfs = [1, 1/(1+disc), 1/Math.pow(1+disc,2), 1/Math.pow(1+disc,3)];
+  const npv = cf.reduce((s,v,i) => s + v*dfs[i], 0);
+  const cum = cf.reduce((acc,v) => { acc.push((acc[acc.length-1]||0)+v); return acc; }, []);
+  let payback = Infinity;
+  for (let i=1; i<cum.length; i++) {
+    if (cum[i]>=0) { payback = (i-1) + (-cum[i-1])/(cum[i]-cum[i-1]); break; }
+  }
+  const roi = y0inv > 0 ? npv / y0inv : 0;
+
+  return { ns, gm, inv, dio, wo, prod, trans, planner, contractor, disc, r1, r2,
+    D1, D2, D3_invFA, D4_invBias, D5_obs, D6_prod, D7_log, D8_planner, D9_contractor,
+    annualRecurring, oneTimeWC, totalInv, y0inv, y1inv, y2inv, y3inv,
+    cf, cum, npv, payback, roi, sf, dfs, relErrReduction, faimp, bias, useGM, faBasePct };
+}
+
+function calcInvTotals() {
+  const cats = ['sw','si','data','cm','internal','hypercare'];
+  let y0=0,y1=0,y2=0,y3=0;
+  cats.forEach(c => {
+    const el0 = document.getElementById('inv-'+c+'-0');
+    const d = INV_DEFAULTS[c];
+    const v = (i) => el0 ? (parseFloat(document.getElementById('inv-'+c+'-'+i)?.value)||0) : d[i];
+    y0 += v(0); y1 += v(1); y2 += v(2); y3 += v(3);
+  });
+  const cont = (v) => Math.round(v*0.1);
+  y0 += cont(y0); y1 += cont(y1); y2 += cont(y2); y3 += cont(y3);
+  return { y0, y1, y2, y3, total3yr: y0+y1+y2+y3 };
+}
+
+function recalc() {
+  const m = calcModel();
+  renderKPIs(m);
+  renderAssumptionTable(m);
+  renderOverrideTable(m);
+  renderDrivers(m);
+  renderWaterfall(m);
+  renderBenchmarks();
+  renderInvestment(m);
+  renderCashFlow(m);
+}
+
+function renderKPIs(m) {
+  const cards = [
+    { l: 'Annual recurring benefit', v: fmtM(m.annualRecurring), s: 'full run-rate' },
+    { l: 'One-time WC release', v: fmtM(m.oneTimeWC), s: 'from inventory reduction' },
+    { l: '3-year NPV', v: fmtM(m.npv), s: `at ${pct(m.disc)} discount` },
+    { l: 'Payback', v: isFinite(m.payback) ? m.payback.toFixed(1)+' yrs' : 'N/A', s: 'from program start' },
+  ];
+  document.getElementById('kpi-cards').innerHTML = cards.map(c =>
+    `<div class="mc"><p class="mc-lbl">${c.l}</p><p class="mc-val">${c.v}</p><p class="mc-sub">${c.s}</p></div>`).join('');
+}
+
+function renderAssumptionTable(m) {
+  const sf = SCENARIO_FACTORS[scenario];
+  const rows = [
+    ['FA → SL uplift per +1pp FA', 'faToSL', v => v.toFixed(3)+' pp SL', 'Revenue'],
+    ['Bias → SL uplift per +1pp bias', 'biasToSL', v => v.toFixed(3)+' pp SL', 'Revenue'],
+    ['True lost sales share of unmet demand', 'trueLostSales', v => (v*100).toFixed(0)+'%', 'Revenue'],
+    ['FA → inventory reduction per +1pp FA', 'faToInv', v => (v*100).toFixed(2)+'% inv', 'Working capital'],
+    ['Bias → inventory reduction per +1pp bias', 'biasToInv', v => (v*100).toFixed(3)+'% inv', 'Working capital'],
+    ['Addressable obsolescence through FA', 'obsShare', v => (v*100).toFixed(0)+'%', 'Obsolescence'],
+    ['Rush orders baseline share', 'rushShare', v => (v*100).toFixed(0)+'%', 'Production'],
+    ['Rush order cost premium factor', 'rushPrem', v => v.toFixed(1)+'x', 'Production'],
+    ['Expedited shipments baseline share', 'expShare', v => (v*100).toFixed(0)+'%', 'Logistics'],
+    ['Expedited shipment cost premium factor', 'expPrem', v => v.toFixed(1)+'x', 'Logistics'],
+  ];
+  const el = document.getElementById('assumption-table');
+  el.innerHTML = `<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:4px 10px;font-size:11px;font-weight:500;color:var(--color-text-secondary);padding-bottom:6px;border-bottom:0.5px solid var(--color-border-tertiary);margin-bottom:4px;">
+    <span>Assumption</span><span>Low</span><span>Base</span><span>High</span></div>` +
+  rows.map(([label, key, f]) => {
+    const low = f(SCENARIO_FACTORS.Low[key]), base = f(SCENARIO_FACTORS.Base[key]), high = f(SCENARIO_FACTORS.High[key]);
+    const cur = scenario === 'Low' ? 'low' : scenario === 'Base' ? 'base' : 'high';
+    return `<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:4px 10px;align-items:center;padding:4px 0;border-bottom:0.5px solid var(--color-border-tertiary);">
+      <span style="font-size:12px;color:var(--color-text-secondary)">${label}</span>
+      <span style="font-size:12px;font-weight:${cur==='low'?'500':'400'};color:${cur==='low'?'#633806':'var(--color-text-secondary)'};">${low}</span>
+      <span style="font-size:12px;font-weight:${cur==='base'?'500':'400'};color:${cur==='base'?'#0C447C':'var(--color-text-secondary)'};">${base}</span>
+      <span style="font-size:12px;font-weight:${cur==='high'?'500':'400'};color:${cur==='high'?'#27500A':'var(--color-text-secondary)'};">${high}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderOverrideTable(m) {
+  const rows = [
+    ['Net sales uplift from FA', fmt(m.D1), 'Assumption Override'],
+    ['Net sales uplift from Bias', fmt(m.D2), 'Assumption Override'],
+    ['Inventory cash release from FA', fmt(m.D3_invFA), 'Assumption Override'],
+    ['Inventory cash release from Bias', fmt(m.D4_invBias), 'Assumption Override'],
+    ['Obsolescence reduction', fmt(m.D5_obs), 'Assumption Override'],
+    ['Production cost reduction', fmt(m.D6_prod), 'Assumption Override'],
+    ['Logistics cost reduction', fmt(m.D7_log), 'Assumption Override'],
+    ['Planner productivity', fmt(m.D8_planner), 'Optional baseline'],
+    ['External contractor reduction', fmt(m.D9_contractor), 'Optional baseline'],
+  ];
+  document.getElementById('override-source-table').innerHTML =
+    rows.map(([label, val, src]) => `<div class="row">
+      <span style="font-size:12px;color:var(--color-text-secondary)">${label}</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-size:12px;font-weight:500">${val}</span>
+        <span class="override-highlight">${src}</span>
+      </div>
+    </div>`).join('');
+}
+
+function renderDrivers(m) {
+  const rows = [
+    { id:'D1', label:'Net sales uplift from FA', module:'DP', type:'Top-line GP', val: m.D1, cash: 0 },
+    { id:'D2', label:'Net sales uplift from Bias', module:'DP', type:'Top-line GP', val: m.D2, cash: 0 },
+    { id:'D5', label:'Obsolescence / waste reduction', module:'SP/IBP', type:'Bottom-line', val: m.D5_obs, cash: 0 },
+    { id:'D6', label:'Production cost reduction', module:'DP', type:'Bottom-line', val: m.D6_prod, cash: 0 },
+    { id:'D7', label:'Logistics cost reduction', module:'SP', type:'Bottom-line', val: m.D7_log, cash: 0 },
+    { id:'D8', label:'Planner productivity', module:'DP/SP/IBP', type:'Bottom-line', val: m.D8_planner, cash: 0 },
+    { id:'D9', label:'External contractor reduction', module:'DP/SP/IBP', type:'Bottom-line', val: m.D9_contractor, cash: 0 },
+    { id:'D3', label:'Inventory cash release from FA', module:'SP/IBP', type:'Working capital', val: 0, cash: m.D3_invFA },
+    { id:'D4', label:'Inventory cash release from Bias', module:'SP/IBP', type:'Working capital', val: 0, cash: m.D4_invBias },
+  ];
+  const badgeClass = mod => mod==='DP' ? 'badge-dp' : mod==='SP' ? 'badge-sp' : mod==='IBP' ? 'badge-ibp' : 'badge-all';
+  const el = document.getElementById('drivers-list');
+  el.innerHTML = rows.map(r => `<div class="row">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:12px;color:var(--color-text-secondary);min-width:20px">${r.id}</span>
+      <div>
+        <span style="font-size:13px;font-weight:500">${r.label}</span><br>
+        <span class="badge ${badgeClass(r.module)}">${r.module}</span>
+        <span style="font-size:11px;color:var(--color-text-secondary);margin-left:4px">${r.type}</span>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      ${r.val > 0 ? `<div style="font-size:13px;font-weight:500;color:#0F6E56">${fmt(r.val)}/yr</div>` : ''}
+      ${r.cash > 0 ? `<div style="font-size:12px;color:#185FA5">${fmt(r.cash)} one-time</div>` : ''}
+      ${r.val === 0 && r.cash === 0 ? '<span style="color:var(--color-text-secondary);font-size:12px">— (optional)</span>' : ''}
+    </div>
+  </div>`).join('') +
+  `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0 0;border-top:0.5px solid var(--color-border-tertiary);margin-top:4px;">
+    <span style="font-weight:500">Total annual recurring benefit</span>
+    <span style="font-size:16px;font-weight:500;color:#0F6E56">${fmt(m.annualRecurring)}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0 0;">
+    <span style="color:var(--color-text-secondary);font-size:13px">One-time working capital release</span>
+    <span style="font-size:13px;font-weight:500;color:#185FA5">${fmt(m.oneTimeWC)}</span>
+  </div>`;
+}
+
+function renderWaterfall(m) {
+  const items = [
+    { label: 'Net sales uplift (FA)', val: m.D1, pos: true },
+    { label: 'Net sales uplift (Bias)', val: m.D2, pos: true },
+    { label: 'Obsolescence reduction', val: m.D5_obs, pos: true },
+    { label: 'Production cost reduction', val: m.D6_prod, pos: true },
+    { label: 'Logistics cost reduction', val: m.D7_log, pos: true },
+    { label: 'Investment (annual equiv.)', val: (m.y1inv+m.y2inv+m.y3inv)/3, pos: false },
+  ];
+  const maxVal = Math.max(...items.map(i => i.val));
+  document.getElementById('waterfall').innerHTML = items.map(i => {
+    const w = Math.max(6, Math.round((i.val / maxVal) * 240));
+    const col = i.pos ? '#1D9E75' : '#E24B4A';
+    return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px;">
+      <span style="min-width:170px;color:var(--color-text-secondary)">${i.label}</span>
+      <div style="height:18px;border-radius:3px;background:${col};width:${w}px"></div>
+      <span style="font-weight:500;color:${col}">${i.pos?'+':'-'}${fmt(i.val)}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderBenchmarks() {
+  const rows = [
+    { area:'Demand Planning', kpi:'Forecast accuracy', typical:'65%', bic:'80%', client:'73.1%', gap:'6.9pp', imp:'1pp', comment:'Base forecast' },
+    { area:'Demand Planning', kpi:'Promo forecast accuracy', typical:'50%', bic:'72%', client:'50%', gap:'22pp', imp:'15pp', comment:'Promo planning' },
+    { area:'IBP / Service', kpi:'OTIF / service level', typical:'90%', bic:'97%', client:'91.3%', gap:'5.7pp', imp:'5pp', comment:'Retail compliance' },
+    { area:'Inventory', kpi:'Inventory reduction potential', typical:'10%', bic:'25%', client:'18%', gap:'7pp', imp:'18%', comment:'Reduction opportunity' },
+    { area:'Freshness / Waste', kpi:'Obsolescence reduction', typical:'15%', bic:'40%', client:'30%', gap:'10pp', imp:'30%', comment:'Waste and markdown' },
+    { area:'Logistics', kpi:'Freight cost reduction', typical:'4%', bic:'10%', client:'8%', gap:'2pp', imp:'8%', comment:'Premium transport' },
+    { area:'Warehousing', kpi:'Warehouse cost reduction', typical:'3%', bic:'10%', client:'7%', gap:'3pp', imp:'7%', comment:'Handling and storage' },
+    { area:'Productivity', kpi:'Planner productivity', typical:'10%', bic:'30%', client:'22%', gap:'8pp', imp:'22%', comment:'Automation potential' },
+  ];
+  const el = document.getElementById('benchmark-table');
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead><tr>${['Area','KPI','Typical CPG','Best-in-class','Client baseline','Gap to BIC','Improvement','Comment'].map(h =>
+      `<th style="text-align:left;padding:6px 4px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r => `<tr>
+      <td style="padding:6px 4px;color:var(--color-text-secondary)">${r.area}</td>
+      <td style="padding:6px 4px;font-weight:500">${r.kpi}</td>
+      <td style="padding:6px 4px;text-align:right">${r.typical}</td>
+      <td style="padding:6px 4px;text-align:right;color:#27500A;font-weight:500">${r.bic}</td>
+      <td style="padding:6px 4px;text-align:right">${r.client}</td>
+      <td style="padding:6px 4px;text-align:right;color:#A32D2D">${r.gap}</td>
+      <td style="padding:6px 4px;text-align:right;color:#0F6E56;font-weight:500">${r.imp}</td>
+      <td style="padding:6px 4px;color:var(--color-text-secondary);font-size:11px">${r.comment}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function renderInvestment(m) {
+  const cats = [
+    { key:'sw', label:'Software / licenses' },
+    { key:'si', label:'System integrator / implementation' },
+    { key:'data', label:'Data integration / analytics' },
+    { key:'cm', label:'Change management / training' },
+    { key:'internal', label:'Internal client effort' },
+    { key:'hypercare', label:'Hypercare / run support' },
+  ];
+  const t = calcInvTotals();
+  const tbl = document.getElementById('inv-table');
+  tbl.innerHTML = `<thead><tr>${['Cost category','Year 0','Year 1','Year 2','Year 3','3-year total'].map(h =>
+    `<th style="text-align:${h==='Cost category'?'left':'right'};padding:7px 6px;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">${h}</th>`).join('')}</tr></thead>
+  <tbody>${cats.map(c => {
+    const d = INV_DEFAULTS[c.key];
+    return `<tr><td style="padding:6px;font-size:13px">${c.label}</td>
+      ${[0,1,2,3].map(i => `<td style="text-align:right;padding:6px;font-size:13px">${fmt(d[i])}</td>`).join('')}
+      <td style="text-align:right;padding:6px;font-size:13px;font-weight:500">${fmt(d.reduce((s,v)=>s+v,0))}</td>
+    </tr>`;
+  }).join('')}
+  <tr style="border-top:0.5px solid var(--color-border-tertiary);">
+    <td style="padding:7px 6px;font-weight:500">10% contingency</td>
+    ${[t.y0,t.y1,t.y2,t.y3].map(v => `<td style="text-align:right;padding:7px 6px;font-size:13px">${fmt(v*0.1/1.1)}</td>`).join('')}
+    <td style="text-align:right;padding:7px 6px"></td>
+  </tr>
+  <tr style="background:var(--color-background-secondary);">
+    <td style="padding:8px 6px;font-weight:500">Total investment</td>
+    ${[t.y0,t.y1,t.y2,t.y3].map(v => `<td style="text-align:right;padding:8px 6px;font-weight:500">${fmt(v)}</td>`).join('')}
+    <td style="text-align:right;padding:8px 6px;font-weight:500;color:#A32D2D">${fmt(t.total3yr)}</td>
+  </tr></tbody>`;
+}
+
+function renderCashFlow(m) {
+  const el = document.getElementById('cf-content');
+  const labels = ['Year 0','Year 1','Year 2','Year 3'];
+  el.innerHTML = `
+    <p class="section-label">Cash flow bridge</p>
+    <div class="card" style="overflow-x:auto;margin-bottom:1rem;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr>${['Line item',...labels].map(h => `<th style="text-align:${h==='Line item'?'left':'right'};padding:7px 4px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)">${h}</th>`).join('')}</tr></thead>
+        <tbody>
+          <tr><td style="padding:7px 4px">Recurring benefit</td>${[0, m.annualRecurring*m.r1, m.annualRecurring*m.r2, m.annualRecurring].map(v => `<td style="text-align:right;padding:7px 4px;color:#0F6E56">${v?fmt(v):'-'}</td>`).join('')}</tr>
+          <tr><td style="padding:7px 4px">Working capital release</td>${[0, m.oneTimeWC, 0, 0].map(v => `<td style="text-align:right;padding:7px 4px;color:#185FA5">${v?fmt(v):'-'}</td>`).join('')}</tr>
+          <tr><td style="padding:7px 4px">Investment</td>${[m.y0inv,m.y1inv,m.y2inv,m.y3inv].map(v => `<td style="text-align:right;padding:7px 4px;color:#A32D2D">(${fmt(v)})</td>`).join('')}</tr>
+          <tr style="border-top:0.5px solid var(--color-border-tertiary)"><td style="padding:7px 4px;font-weight:500">Net cash flow</td>${m.cf.map(v => `<td style="text-align:right;padding:7px 4px;font-weight:500;color:${v>=0?'#0F6E56':'#A32D2D'}">${v>=0?fmt(v):'('+fmt(-v)+')'}</td>`).join('')}</tr>
+          <tr><td style="padding:7px 4px;color:var(--color-text-secondary)">Cumulative</td>${m.cum.map(v => `<td style="text-align:right;padding:7px 4px;color:${v>=0?'#0F6E56':'#A32D2D'}">${v>=0?fmt(v):'('+fmt(-v)+')'}</td>`).join('')}</tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="section-label">Cumulative cash flow</p>
+    <div style="position:relative;width:100%;height:220px;"><canvas id="cf-chart" role="img" aria-label="Cumulative cash flow chart over 3 years">Cumulative cash flow chart</canvas></div>`;
+
+  setTimeout(() => {
+    const canvas = document.getElementById('cf-chart');
+    if (!canvas) return;
+    if (cfChart) cfChart.destroy();
+    cfChart = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Cumulative net cash flow',
+          data: m.cum.map(v => Math.round(v)),
+          backgroundColor: m.cum.map(v => v>=0?'#1D9E75':'#E24B4A'),
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { ticks: { callback: v => fmtM(v), font: { size: 11 } }, grid: { color: 'rgba(128,128,128,0.1)' } },
+          x: { ticks: { font: { size: 11 } }, grid: { display: false } }
+        }
+      }
+    });
+  }, 50);
+}
+
+function sw(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'cashflow') setTimeout(recalc, 30);
+}
+
+function buildContext() {
+  const m = calcModel();
+  const sf = m.sf;
+  const c = gs('b-currency') || 'EUR';
+  return `You are a senior supply chain consulting expert and financial analyst. You are helping a CPG client evaluate a business case for a planning transformation (DP + SP + IBP).
+
+ACTIVE SCENARIO: ${scenario}
+CLIENT: CPG Client — Planning Transformation
+CURRENCY: ${c}
+
+BASELINE INPUTS:
+- Net sales: ${fmt(m.ns)}
+- Gross margin: ${pct(m.gm)}
+- Average inventory: ${fmt(m.inv)}
+- DIO: ${m.dio} days
+- Inventory write-offs: ${fmt(m.wo)}
+- Production cost baseline: ${fmt(m.prod)}
+- Transport cost baseline: ${fmt(m.trans)}
+- Forecast accuracy baseline: ${pct(m.faBasePct)}
+- FA improvement applied: ${m.faimp} pp
+- Bias improvement applied: ${m.bias} pp
+- Service level baseline: ${g('b-sl')}%
+- Discount rate: ${pct(m.disc)}
+- Year 1 ramp: ${pct(m.r1)}, Year 2 ramp: ${pct(m.r2)}
+- Include gross margin on revenue levers: ${m.useGM ? 'Yes' : 'No'}
+
+SCENARIO ASSUMPTION MULTIPLIERS (${scenario}):
+- FA to SL uplift per +1pp FA: ${sf.faToSL}
+- Bias to SL uplift per +1pp bias: ${sf.biasToSL}
+- True lost sales share of unmet demand: ${(sf.trueLostSales*100).toFixed(0)}%
+- FA to inventory reduction per +1pp: ${sf.faToInv}
+- Bias to inventory reduction per +1pp: ${sf.biasToInv}
+- Addressable obsolescence share: ${(sf.obsShare*100).toFixed(0)}%
+- Rush order share: ${(sf.rushShare*100).toFixed(0)}%, premium: ${sf.rushPrem}x
+- Expedited shipment share: ${(sf.expShare*100).toFixed(0)}%, premium: ${sf.expPrem}x
+
+DRIVER CALCULATIONS (Assumption Override):
+- D1 Net sales uplift from FA: ${fmt(m.D1)}/yr (P&L)
+- D2 Net sales uplift from Bias: ${fmt(m.D2)}/yr (P&L)
+- D3 Inventory cash release from FA: ${fmt(m.D3_invFA)} (one-time WC)
+- D4 Inventory cash release from Bias: ${fmt(m.D4_invBias)} (one-time WC)
+- D5 Obsolescence reduction: ${fmt(m.D5_obs)}/yr
+- D6 Production cost reduction: ${fmt(m.D6_prod)}/yr
+- D7 Logistics cost reduction: ${fmt(m.D7_log)}/yr
+- D8 Planner productivity: ${fmt(m.D8_planner)}/yr
+- D9 External contractor reduction: ${fmt(m.D9_contractor)}/yr
+
+SUMMARY RESULTS:
+- Total annual recurring benefit: ${fmt(m.annualRecurring)}
+- One-time working capital release: ${fmt(m.oneTimeWC)}
+- 3-year total investment: ${fmt(m.totalInv)}
+- Cash flows: Y0=${fmt(m.cf[0])}, Y1=${fmt(m.cf[1])}, Y2=${fmt(m.cf[2])}, Y3=${fmt(m.cf[3])}
+- Cumulative: Y0=${fmt(m.cum[0])}, Y1=${fmt(m.cum[1])}, Y2=${fmt(m.cum[2])}, Y3=${fmt(m.cum[3])}
+- 3-year NPV: ${fmtM(m.npv)}
+- Payback: ${isFinite(m.payback) ? m.payback.toFixed(2)+' years' : 'beyond horizon'}
+- ROI on Y0 investment: ${(m.roi*100).toFixed(0)}%
+
+BENCHMARKS (CPG):
+Forecast accuracy: client 73.1% vs BIC 80%. Promo FA: 50% vs 72%. OTIF: 91.3% vs 97%.
+Inventory reduction: BIC 25% potential. Obsolescence: BIC 40% reduction. Logistics: BIC 10%.
+
+Answer concisely and precisely in 3-6 sentences. Use the ${c} currency. Reference specific driver numbers and percentages. Highlight key risks and sensitivities where relevant.`;
+}
+
+async function ask(q) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => { if(t.textContent.includes('AI')) t.classList.add('active'); else t.classList.remove('active'); });
+  document.getElementById('tab-ai').classList.add('active');
+  addMsg('user', q);
+  const lid = addMsg('ai', '<span class="dot">Thinking…</span>');
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1000,
+        system: buildContext(), messages: [...chatHistory, {role:'user',content:q}] })
+    });
+    const d = await r.json();
+    const t = d.content?.map(b => b.text||'').join('') || 'No response received.';
+    chatHistory.push({role:'user',content:q});
+    chatHistory.push({role:'assistant',content:t});
+    updMsg(lid, t);
+  } catch(e) { updMsg(lid, 'Error reaching the AI. Please try again.'); }
+}
+
+async function send() {
+  const inp = document.getElementById('chat-inp');
+  const q = inp.value.trim(); if (!q) return;
+  inp.value = '';
+  await ask(q);
+}
+
+let mid = 0;
+function addMsg(role, html) {
+  const area = document.getElementById('chat-area');
+  const id = 'msg-' + (++mid);
+  const pfx = role === 'user'
+    ? '<span style="font-size:10px;font-weight:500;color:var(--color-text-secondary);margin-right:6px">YOU</span>'
+    : '<span style="font-size:10px;font-weight:500;color:#185FA5;margin-right:6px">AGENT</span>';
+  area.innerHTML += `<div id="${id}" style="margin-bottom:8px;color:${role==='user'?'var(--color-text-secondary)':'var(--color-text-primary)'}">${pfx}${html}</div>`;
+  area.scrollTop = area.scrollHeight;
+  return id;
+}
+function updMsg(id, html) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.innerHTML = '<span style="font-size:10px;font-weight:500;color:#185FA5;margin-right:6px">AGENT</span>' + html.replace(/\n/g,'<br>');
+    document.getElementById('chat-area').scrollTop = 99999;
+  }
+}
+
+recalc();
+</script>
